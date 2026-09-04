@@ -9,25 +9,29 @@ A self-hosted, lightweight service hub running on the Minisforum local server (o
 ## In scope
 - **Environment & Dependencies:** `requirements.txt` with pinned versions (`fastapi`, `uvicorn`, `python-multipart`, `google-genai`, `python-dotenv`, `pytest`, `httpx`).
 - **Configuration & Secrets:** `.env.example` defining `GEMINI_API_KEY`, server host/port, default TTS voice, and prompt formatting preferences.
-- **Gemini Service Integration:** `app/gemini_service.py` using official `google-genai` SDK for audio transcription and speech synthesis.
+- **Tailscale & Origin Guard:** `app/origin_guard.py` middleware validating that requests come only from trusted loopback (`127.0.0.1`, `localhost`, `::1`) or authenticated Tailscale mesh (`*.ts.net`, `100.64.0.0/10`).
 - **OpenAI-Compatible Audio API:**
-  - `POST /v1/audio/transcriptions`: Accepts multipart form audio, converts to clean punctuated text, returns `{ "text": "..." }`.
-  - `POST /v1/audio/speech`: Accepts JSON with model, voice, and input text; streams back raw audio bytes.
+  - `POST /v1/audio/transcriptions` (or `/tts-stt/v1/audio/transcriptions` when routed via Tailscale Serve): Accepts multipart form audio, converts to clean punctuated text, returns `{ "text": "..." }`.
+  - `POST /v1/audio/speech` (or `/tts-stt/v1/audio/speech`): Accepts JSON with model, voice, and input text; streams back raw audio bytes.
   - `GET /v1/models`: Returns list of supported STT and TTS models.
   - `GET /health`: Health check endpoint.
 - **Web Dashboard:** `app/static/index.html` allowing the user to test microphone recording, view transcription, test TTS voices, and verify the server status.
 - **Desktop Dictation Client:** `client/desktop.py` (Windows hotkey listener for system-wide dictation) and `client/README.md`.
-- **Android Setup Documentation:** `docs/android_setup.md` guide on configuring Whisper IME / Sayboard APK to connect to the hub.
-- **Automated Tests:** `tests/test_api.py` validating API responses, schema adherence, and error handling.
+- **Android Setup Documentation:** `docs/android_setup.md` guide on configuring Whisper IME / Sayboard APK to connect to the hub (including Tailscale HTTPS URL format: `https://<node>.<tailnet>.ts.net/tts-stt/v1`).
+- **Automated Tests:** `tests/test_api.py` validating API responses, schema adherence, origin guard security, and error handling.
 
 ## Out of scope
 - Building custom native Android APK from source (using existing open-source keyboards).
 - Heavy local neural model binaries (Kokoro, Whisper local weights) since user selected Gemini Pro / API approach.
-- Multi-user authentication or public SaaS billing.
+- Public internet exposure or Tailscale Funnel (`allow_funnel: false`).
 
 ## Constraints
 - **Zero hardcoded secrets:** `GEMINI_API_KEY` loaded exclusively from environment / `.env`.
 - **OpenAI API Standard:** Endpoints must strictly match OpenAI specification so off-the-shelf mobile keyboards work seamlessly without requiring custom client apps.
+- **Tailscale URL & Serve Rules:**
+  - Remote access via `tailscale serve --https=443 --set-path="/tts-stt" --bg --yes 8000`.
+  - Origin pattern matches `^https://[A-Za-z0-9.-]+\.ts\.net/tts-stt$`.
+  - Tailscale Funnel is strictly disabled.
 - **Fast turnaround:** Asynchronous I/O with minimal streaming latency.
 - **Windows PowerShell 5.1 compatibility:** All commands provided must be single-command PowerShell syntax without bashisms or `&&`.
 
@@ -40,13 +44,14 @@ A self-hosted, lightweight service hub running on the Minisforum local server (o
 1. `requirements.txt` — define and pin core dependencies.
 2. `.env.example` — configuration template.
 3. `app/config.py` — environment settings and prompt configurations.
-4. `app/gemini_service.py` — Gemini client interactions (transcribe with formatting, generate speech).
-5. `app/main.py` — FastAPI application routing `/v1/audio/transcriptions`, `/v1/audio/speech`, `/v1/models`, `/health`, and static files.
-6. `app/static/index.html` — browser test UI.
-7. `client/desktop.py` — Windows hotkey dictation utility.
-8. `docs/android_setup.md` — Android connection guide for Whisper IME.
-9. `tests/test_api.py` — unit and endpoint tests.
-10. `README.md` — human-friendly project guide.
+4. `app/origin_guard.py` — loopback and Tailscale host/origin validation middleware.
+5. `app/gemini_service.py` — Gemini client interactions (transcribe with formatting, generate speech).
+6. `app/main.py` — FastAPI application routing `/v1/audio/transcriptions`, `/v1/audio/speech`, `/v1/models`, `/health`, and static files.
+7. `app/static/index.html` — browser test UI.
+8. `client/desktop.py` — Windows hotkey dictation utility.
+9. `docs/android_setup.md` — Android connection guide for Whisper IME with Tailscale.
+10. `tests/test_api.py` — unit and endpoint tests (including origin guard tests).
+11. `README.md` — human-friendly project guide.
 
 ## How we'll verify it works
 1. Run automated test suite: `pytest` passing all tests.

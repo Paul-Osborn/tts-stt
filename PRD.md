@@ -32,8 +32,7 @@ The owner across their primary personal devices (Android phone, Android tablet, 
 - Provide a simple web UI served by the hub to test microphone recording, transcription, and TTS playback.
 - Provide a lightweight Windows client script for hotkey-based dictation.
 
-## Non-functional needs
-- **Security / privacy:** `GEMINI_API_KEY` stored exclusively in local `.env` (never committed to git). Hub accessible via LAN and Tailscale without public port forwarding.
+- **Security / privacy:** `GEMINI_API_KEY` stored exclusively in local `.env` (never committed to git). Hub exposed remotely strictly via private `tailscale serve --https=443 --set-path="/tts-stt"` (`https://<node>.<tailnet>.ts.net/tts-stt`) with Tailscale Funnel disabled (no public internet exposure). Host & origin guard active.
 - **Performance / limits:** Sub-second to 1.5s turnaround for dictation snippets. Server memory footprint under 200 MB RAM and negligible CPU when idle.
 - **Platform:** Server runs on Windows or Linux / Docker (Python 3.11+); mobile clients on Android.
 

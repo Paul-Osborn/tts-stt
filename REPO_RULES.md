@@ -182,6 +182,15 @@ fix the underlying cause (branch first, remove the secret, etc.).
 - No secret ever enters the repo — not in code, config, history, or a commit message.
 - Before pushing, scan the diff for keys, tokens, paths with usernames, and device serials.
 - State the network policy: Outbound network calls are allowed only to Google Gemini API (`generativelanguage.googleapis.com`) for audio transcription and speech synthesis. All inbound traffic is restricted to local network / Tailscale mesh.
+- **Private Tailscale Serve:** Remote access is exposed strictly via `tailscale serve` over authenticated private Tailnet HTTPS addresses:
+  ```bash
+  tailscale serve --https=443 --set-path="/tts-stt" --bg --yes 8000
+  ```
+- **Tailscale URL & Naming Conventions:**
+  - Full origin URL pattern: `https://<node-name>.<tailnet-name>.ts.net<route-path>` (validated by `^https://[A-Za-z0-9.-]+\.ts\.net$ROUTE_PATH$`).
+  - Route path convention: Single lowercase hyphenated path (`^/[a-z0-9][a-z0-9-]*$`), default `/tts-stt`.
+- **No Tailscale Funnel:** Tailscale Funnel is strictly forbidden (`allow_funnel: false`) to prevent any exposure to the public internet.
+- **Origin & Host Guard:** The hub validates incoming `Host` and `Origin` headers, allowing only loopback (`127.0.0.1`, `localhost`, `::1`) and private Tailscale network origins (`*.ts.net` and `100.64.0.0/10` CGNAT range).
 - If a secret is ever committed, treat it as compromised: rotate it immediately, then scrub
   history (§7). Scrubbing alone is not enough — the key is burned.
 
