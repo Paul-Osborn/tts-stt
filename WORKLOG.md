@@ -5,6 +5,13 @@
 > sessions — if a decision isn't written here, the next session won't know it. Keep entries
 > short; link to PRs/specs instead of re-explaining.
 
+## 2026-09-04 — Configure git remote for self-hosted Forgejo gitserver
+- **Branch:** `feat/stt-tts-hub-server`
+- **Changed:** Configured origin remote to `ssh://git@gitserver.tail97bf76.ts.net:22/paul/tts-stt.git` for self-hosted Forgejo server mirroring.
+- **Verified by:** SSH connection to `git@gitserver.tail97bf76.ts.net` verified successful (authenticated key `leeloo-laptop`).
+- **Next:** Push initial branches (`main` and `feat/stt-tts-hub-server`) once empty repo is created on Forgejo.
+- **Open decisions:** None.
+
 ## 2026-09-04 — Align repository rules and spec with Tailscale server conventions
 - **Branch:** `feat/stt-tts-hub-server`
 - **Changed:** Incorporated server naming and Tailscale conventions into `REPO_RULES.md`, `SPEC.md`, and `PRD.md`: private Tailscale Serve routing (`tailscale serve --https=443 --set-path="/tts-stt"`), origin regex (`https://<node>.<tailnet>.ts.net/tts-stt`), origin/host guard middleware requirement (`app/origin_guard.py`), and explicit prohibition of Tailscale Funnel.
