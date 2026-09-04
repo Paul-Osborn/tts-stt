@@ -1,0 +1,14 @@
+---
+description: Project rules — always follow AGENTS.md before touching code
+alwaysApply: true
+---
+
+Before touching any code, open and follow `AGENTS.md` in the repo root. It is the single
+source of truth for this project: the git workflow (branch → commit → push → review → open PR →
+merge green PR), plan-before-code, prove-it-works, and the guardrails.
+
+Git is hands-off — run that workflow yourself without asking, and merge when CI is green.
+
+> Copy this file to `.cursor/rules/agents.mdc`. (Cursor also reads `AGENTS.md` at the repo root
+> natively; this rule guarantees it's always applied. Add more `.cursor/rules/*.mdc` files for
+> Cursor-specific scoped rules if you ever need them.)

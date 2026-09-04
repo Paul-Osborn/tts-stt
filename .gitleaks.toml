@@ -1,0 +1,25 @@
+# Gitleaks config — controls the secret scanner used by lefthook.yml.
+# Copy to your repo root as `.gitleaks.toml`.
+#
+# By default this extends Gitleaks' built-in rules, which already detect AWS keys,
+# GitHub/GitLab tokens, Slack/Stripe/OpenAI keys, private keys, JWTs, and generic
+# high-entropy secrets. You usually only need to add an allowlist for false positives.
+
+title = "tts-stt secret scan"
+
+[extend]
+useDefault = true
+
+# Allowlist: tell the scanner about things that LOOK like secrets but aren't, so it
+# stops flagging them. Keep this tight — every entry is a hole in the net.
+[allowlist]
+description = "Known-safe paths and example placeholders"
+paths = [
+  '''\.env\.example$''',
+  '''(^|/)tests?/fixtures/''',
+]
+# Regexes for placeholder values that are safe to commit (e.g. in docs/examples).
+regexes = [
+  '''EXAMPLE_[A-Z0-9_]+''',
+  '''your-[a-z-]+-here''',
+]
