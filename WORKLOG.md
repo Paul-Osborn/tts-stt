@@ -12,6 +12,11 @@
 - **Next:** Owner review and human merge of this governance/documentation PR; implementation remains unapproved.
 - **Open decisions:** Setup-time provider capability, Free Tier availability, owner Google identity, recovery configuration, and real-device evidence must be verified during implementation.
 
+### Handoff checkpoint
+- Planning document commit: `7d1ecce` on `docs/multprovider-v1-spec`.
+- Targeted consistency checks and pre-commit gates passed. The required governance review could not run because the reviewer hit its usage limit; no PR was opened and no implementation is authorized.
+- Next agent: push/check both remotes if needed, obtain one independent final review and receipt, then open the owner-merge-only PR against `feat/stt-tts-hub-server`. Do not deploy, configure providers/OAuth, or alter shared routing.
+
 ## 2026-09-06 — Upgrade repository governance to V2
 - **Branch:** `chore/governance-v2`
 - **Changed:** Applied the official V2 gate update and aligned generic governance guidance; kept the Gemini, OpenAI-compatible audio API, private `/tts-stt` Tailscale mount, no-Funnel, and host/origin-guard requirements unchanged.
