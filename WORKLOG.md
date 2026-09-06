@@ -9,8 +9,8 @@
 - **Branch:** `chore/governance-v2`
 - **Changed:** Applied the official V2 gate update and aligned generic governance guidance; kept the Gemini, OpenAI-compatible audio API, private `/tts-stt` Tailscale mount, no-Funnel, and host/origin-guard requirements unchanged.
 - **Verified by:** Official updater preview after application and targeted governance acceptance checks.
-- **Next:** Independent governance review and owner merge of the governance PR.
-- **Open decisions:** None.
+- **Next:** Create the `paul/tts-stt` Forgejo repository, then push this reviewed branch and open the owner-merge-only governance PR.
+- **Open decisions:** Forgejo currently refuses repository creation by push.
 
 ## 2026-09-04 — Configure git remote for self-hosted Forgejo gitserver
 - **Branch:** `feat/stt-tts-hub-server`
