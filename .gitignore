@@ -26,6 +26,7 @@ __pycache__/
 *.py[cod]
 
 # Local state / caches / logs
+.governance-backup/
 *.log
 .cache/
 .pytest_cache/
