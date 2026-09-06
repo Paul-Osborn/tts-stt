@@ -5,6 +5,13 @@
 > sessions — if a decision isn't written here, the next session won't know it. Keep entries
 > short; link to PRs/specs instead of re-explaining.
 
+## 2026-09-06 — Finalize multi-provider Version 1 planning
+- **Branch:** `docs/multprovider-v1-spec`
+- **Changed:** Replaced the Gemini-only plan with the approved staged multi-provider V1 specification and aligned the brief/rules with the encrypted provider-vault and per-client credential architecture; no application, provider, OAuth, routing, or deployment work was authorized.
+- **Verified by:** Approved Red–Blue–Red specification reviews and official pricing/provider research, then targeted document consistency checks.
+- **Next:** Owner review and human merge of this governance/documentation PR; implementation remains unapproved.
+- **Open decisions:** Setup-time provider capability, Free Tier availability, owner Google identity, recovery configuration, and real-device evidence must be verified during implementation.
+
 ## 2026-09-06 — Upgrade repository governance to V2
 - **Branch:** `chore/governance-v2`
 - **Changed:** Applied the official V2 gate update and aligned generic governance guidance; kept the Gemini, OpenAI-compatible audio API, private `/tts-stt` Tailscale mount, no-Funnel, and host/origin-guard requirements unchanged.
