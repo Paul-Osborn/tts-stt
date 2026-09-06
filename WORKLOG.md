@@ -5,6 +5,13 @@
 > sessions — if a decision isn't written here, the next session won't know it. Keep entries
 > short; link to PRs/specs instead of re-explaining.
 
+## 2026-09-06 — Upgrade repository governance to V2
+- **Branch:** `chore/governance-v2`
+- **Changed:** Applied the official V2 gate update and aligned generic governance guidance; kept the Gemini, OpenAI-compatible audio API, private `/tts-stt` Tailscale mount, no-Funnel, and host/origin-guard requirements unchanged.
+- **Verified by:** Official updater preview after application and targeted governance acceptance checks.
+- **Next:** Create the `paul/tts-stt` Forgejo repository, then push this reviewed branch and open the owner-merge-only governance PR.
+- **Open decisions:** Forgejo currently refuses repository creation by push.
+
 ## 2026-09-04 — Configure git remote for self-hosted Forgejo gitserver
 - **Branch:** `feat/stt-tts-hub-server`
 - **Changed:** Configured origin remote to `ssh://git@gitserver.tail97bf76.ts.net:22/paul/tts-stt.git` for self-hosted Forgejo server mirroring.
