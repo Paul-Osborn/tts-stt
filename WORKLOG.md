@@ -1,5 +1,28 @@
 # Work log — tts-stt
 
+## 2026-09-08 — Local GPU transcription proven on the laptop
+- **Branch:** `feat/local-whisper`
+- **Direction change:** the owner replaced the cloud provider with local models, speech-to-text
+  only, text-to-speech dropped. Reasoning and the constraints it invalidates are in
+  `docs/local-stt-direction.md`. Compute runs on the laptop RTX 3060, not the mini PC; the
+  owner has accepted that dictation is unavailable when the laptop is asleep.
+- **Changed:** Added `app/whisper.py`, a local Whisper large-v3-turbo adapter, and pinned the
+  CUDA runtime wheels. Nothing is wired into the endpoint yet.
+- **Verified:** Real transcription on the GPU. Model load 4.8s once at startup, then **0.7s**
+  steady state for a 20-second clip (first call after load 1.9s while kernels warm). Transcript
+  was complete and verbatim with no truncation.
+- **Caveat on punctuation:** the test clip was generated with the Windows synthetic voice, which
+  has no natural prosody, so mid-sentence punctuation could not be judged from it. Whisper
+  punctuates from phrasing and pauses. **This still needs one real recording of the owner
+  speaking before the punctuation claim is proven.**
+- **Fixed along the way:** CTranslate2 resolves `cublas64_12.dll` through `PATH`, which does not
+  include the site-packages location pip installs it to on Windows. `os.add_dll_directory` does
+  not help; `app/whisper.py` prepends the paths to `PATH` before loading.
+- **Next:** point `/v1/audio/transcriptions` at the local engine; remove the Gemini adapter,
+  `/v1/audio/speech`, the provider vault, free-tier gate and quota limits; update the tests
+  (they still assert the Gemini and speech behaviour); rewrite the 200 MB / no-local-models
+  constraints in `PRD.md` and `REPO_RULES.md`; then set up the phone keyboard.
+
 ## 2026-09-08 — Gemini implementation checkpoint
 - **Branch:** `feat/gemini-working-hub`, based on the latest multi-provider planning branch.
 - **Implemented:** Mounted FastAPI audio subset; bounded fixed-origin Gemini REST adapter; encrypted SQLite credential store and verifier-only device keys; Google owner login with PKCE/state/nonce and recent-auth validation; CSRF-protected controls; browser recorder/player; F8 Windows helper; setup, recovery, Android and compatibility guides.

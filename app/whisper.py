@@ -1,7 +1,9 @@
 """Local speech-to-text on the laptop GPU. No audio leaves this machine."""
 import io
+import os
 import sys
 import time
+from pathlib import Path
 
 from fastapi import HTTPException
 
@@ -11,10 +13,20 @@ EXTENSIONS = ('wav', 'mp3', 'm4a', 'ogg', 'flac', 'webm', 'aac')
 _model = None
 
 
+def _add_cuda_dlls():
+    """CTranslate2 resolves the CUDA runtime through PATH, which does not
+    include site-packages where pip puts the NVIDIA libraries on Windows."""
+    if os.name != 'nt':
+        return
+    dirs = [str(p) for p in (Path(sys.prefix) / 'Lib/site-packages/nvidia').glob('*/bin')]
+    os.environ['PATH'] = os.pathsep.join(dirs + [os.environ.get('PATH', '')])
+
+
 def load(device='cuda', compute_type='float16'):
     """Load once and keep resident; first call downloads the model."""
     global _model
     if _model is None:
+        _add_cuda_dlls()
         from faster_whisper import WhisperModel
         _model = WhisperModel(MODEL, device=device, compute_type=compute_type)
     return _model
