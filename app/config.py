@@ -25,8 +25,10 @@ class Settings:
                 or url.password or url.scheme not in ('http', 'https')):
             raise ValueError('HUB_BASE_URL must be a fixed private URL ending in /tts-stt')
         if url.hostname not in ('localhost', '127.0.0.1', '::1'):
-            if url.scheme != 'https' or url.hostname != 'gitserver.tail97bf76.ts.net':
-                raise ValueError('Remote URL must use the private home server')
+            # Any machine on the owner's own Tailscale network, so the hub can run on the
+            # laptop that holds the GPU as well as the mini PC. Nothing public resolves here.
+            if url.scheme != 'https' or not url.hostname.endswith('.tail97bf76.ts.net'):
+                raise ValueError('Remote URL must use a machine on the private Tailscale network')
 
     @property
     def origin(self):
