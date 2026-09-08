@@ -54,7 +54,11 @@ and verify. This invalidates every old device and session. Keep the service stop
 throughout. Never restore old state after revocation. No plaintext secret export or
 state backup is supported.
 
-## Minisforum deployment (pending live verification)
+## Minisforum deployment (not the current plan)
+
+The speech model runs on the laptop's graphics card, so the hub runs on the laptop and the
+mini PC hosts nothing for this project. Keep this section only as the recipe to follow if the
+model is ever moved there — see `docs/local-stt-direction.md` for why it was not.
 
 Use a dedicated unprivileged account, private checkout/venv and `.env`, one worker,
 loopback binding, no access log, restart on failure and `LimitCORE=0`. The server
@@ -69,6 +73,6 @@ single root proxy. Do not open LAN/public ports or use Funnel. Deployment has no
 been performed by this implementation checkpoint.
 
 Acceptance: verify real Google sign-in, rejected non-owner sign-in, revocation,
-one spoken transcription, audible TTS, actual Free Tier account limits, phone
-insertion, Windows insertion, and cleanup after interrupted uploads/provider
-failure. Record results before marking a provider profile accepted.
+one spoken transcription with correct punctuation, phone insertion, Windows
+insertion, and clean recovery from an interrupted upload or a failed
+transcription. Record the results before calling a client accepted.
