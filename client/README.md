@@ -12,7 +12,7 @@ From PowerShell in this project folder:
 ```
 
 Click a text field. Hold **F8**, speak, and release. The helper records from your
-default microphone for at most 20 seconds, transcribes, and pastes. If you switch
+default microphone for at most five minutes, transcribes, and pastes. If you switch
 windows while waiting, it leaves the transcript on your clipboard instead.
 Press **Ctrl+C** in the helper's terminal to stop.
 

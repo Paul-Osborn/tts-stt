@@ -13,13 +13,14 @@ the project working.
 ## 1. Scope & structure
 
 - Describe the intended shape of the project in one or two lines, so drift is obvious:
-  A Python FastAPI multi-provider speech hub under `app/` exposing OpenAI-compatible STT/TTS,
-  protected local control/vault services, client helpers under `client/`, and tests under `tests/`.
+  A Python FastAPI speech-to-text hub under `app/` exposing the OpenAI-compatible transcription
+  endpoint over a local Whisper model, with a protected owner control page, client helpers under
+  `client/`, and tests under `tests/`.
 - Keep the layout predictable. Sketch the top-level structure:
 
   ```
   tts-stt/
-  ├─ app/                    # FastAPI server, endpoints, Gemini integration, web UI
+  ├─ app/                    # FastAPI server, endpoints, local Whisper engine, web UI
   ├─ client/                 # Windows desktop hotkey dictation client
   ├─ tests/                  # Unit and integration test suite
   ├─ requirements.txt        # Pinned Python dependencies
@@ -170,9 +171,9 @@ fix the underlying cause (branch first, remove the secret, etc.).
 - Pin versions for reproducibility (`==`, lockfiles, etc.).
 - Adding a dependency requires a one-line justification in the PR. Remove anything unused.
 - Never hand-edit a generated dependency lockfile. Change its manifest and let the package manager regenerate the lockfile in the same commit.
-- State any hard constraints here: private mounted hub; root secrets only in `.env`; added provider
-  credentials only in the encrypted server-side vault; audited Gemini/OpenRouter/generic-compatible
-  adapters with fixed canonical origins; pinned dependencies.
+- State any hard constraints here: private mounted hub; root secrets only in `.env`; speech is
+  transcribed by a local model and the hub makes no outbound request at all; pinned dependencies,
+  including the CUDA runtime wheels the local engine loads.
 
 ---
 
@@ -180,7 +181,9 @@ fix the underlying cause (branch first, remove the secret, etc.).
 
 - Match the existing style and comment density. Don't reformat untouched code in a feature PR.
 - No dead code, no commented-out blocks, no debug-print spam left behind.
-- Preserve the project's core invariants: OpenAI API compatibility for audio endpoints (`/v1/audio/transcriptions` and `/v1/audio/speech`), asynchronous non-blocking audio handling, zero hardcoded secrets.
+- Preserve the project's core invariants: OpenAI API compatibility for `/v1/audio/transcriptions`,
+  transcription off the request thread so the server stays responsive, zero hardcoded secrets, and
+  no outbound network call from the hub.
 
 ---
 
@@ -188,18 +191,16 @@ fix the underlying cause (branch first, remove the secret, etc.).
 
 - No secret ever enters the repo — not in code, config, history, or a commit message.
 - Before pushing, scan the diff for keys, tokens, paths with usernames, and device serials.
-- State the network policy: inbound traffic is restricted to local network / Tailscale mesh. Outbound
-  provider traffic is only through audited, fixed-origin Gemini, OpenRouter, or generic-compatible
-  adapters; redirects and arbitrary destinations are refused.
-- **Provider and client credentials:** Root secrets (Gemini, Google OAuth, vault root/encryption
-  key, recovery) stay only in `.env`. Added provider credentials use provider-bound authenticated
-  encryption in the restricted server-side vault and are never shown after entry or logged/backed
-  up in plaintext. Each client receives a distinct verifier-only, revocable hub credential.
+- State the network policy: inbound traffic is restricted to local network / Tailscale mesh. There
+  is no outbound traffic. Adding an outbound call — to a speech provider or anything else — is a
+  change to this rule and needs the owner's agreement, not a pull request that quietly makes one.
+- **Credentials:** Root secrets (the store's encryption key, Google OAuth, recovery) stay only in
+  `.env`. Each client receives a distinct verifier-only, revocable hub credential.
 - **Control Center:** Google sign-in is restricted to configured owner subject/email values, with
   state/nonce/PKCE, secure session/CSRF/reauth, and a separately protected recovery process.
-- **Data handling:** keep no transcript/audio history. Audit records are content-free and bounded;
-  logs, crash material, temporary files, raw headers, secrets, and provider error bodies never
-  become retained content.
+- **Data handling:** keep no transcript/audio history. Audio is transcribed in memory and never
+  written to disk, including by the speech engine. Audit records are content-free and bounded;
+  logs, crash material, temporary files, raw headers and secrets never become retained content.
 - **Private Tailscale Serve:** Remote access is exposed strictly via `tailscale serve` over authenticated private Tailnet HTTPS addresses:
   ```bash
   tailscale serve --https=443 --set-path="/tts-stt" --bg --yes 8000

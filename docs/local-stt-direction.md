@@ -1,6 +1,7 @@
-# Direction change under consideration — local speech-to-text, no cloud provider
+# Direction change — local speech-to-text, no cloud provider
 
-**Status:** owner intent stated 2026-09-08, not yet approved as a plan. No code changed.
+**Status:** implemented 2026-09-08. The engine, the removals and the rewritten constraints are done;
+`SPEC.md` is the current plan and this file is kept for the reasoning behind it.
 
 ## What the owner asked for
 

@@ -1,9 +1,9 @@
 # Speech Hub
 
-A small private speech hub: dictate in the browser or Windows, and turn text into
-spoken audio. Gemini processes submitted content; this hub saves no recordings or
-transcripts. Gemini is the implemented provider. OpenRouter and other providers
-remain planned and disabled pending their own live acceptance.
+A small private speech hub: dictate from your phone, the browser, or Windows, and
+get the words back as text. Your recordings are transcribed by a Whisper model
+running on this computer's graphics card. Nothing is sent anywhere, and no
+recording or transcript is saved.
 
 ## Start on this Windows PC
 
@@ -16,9 +16,9 @@ python -m venv .venv
 ```
 
 The setup command asks for a recovery password and creates the private `.env`
-settings file. Open that file locally, add `GEMINI_API_KEY`, and set
-`GEMINI_FREE_TIER_CONFIRMED=yes` only after checking that the key’s Google API
-project has **billing disabled**. Never paste keys into chat.
+settings file. The first time the server starts it downloads the speech model
+(about 1.5 GB) and then keeps it in the graphics card's memory, so start-up takes
+a few seconds and every dictation after that is fast.
 
 ```powershell
 .\.venv\Scripts\python.exe -m app.manage issue "Browser tester"
@@ -35,16 +35,17 @@ See [setup and recovery](docs/setup.md), [Windows dictation](client/README.md), 
 
 ## Limits that keep it small
 
-- One speech request at a time, 5 per minute and 100 in a rolling day. Limits are
-  local resource guards, not a guarantee of Google quota or a spending cap.
-- Browser/Windows recordings stop at 20 seconds. Uploads must be under 1 MB;
-  speech input is at most 2,000 characters. Provider timeout is 60 seconds.
-- Faithful transcription; WAV/PCM speech output. No MP3 encoder, streaming,
-  cleanup mode, automatic provider fallback, or invented OpenAI model aliases.
+- One recording is transcribed at a time; a second request while one is running is
+  turned away rather than queued. The graphics card has room for one model.
+- Recordings must be under 25 MB — roughly ten minutes of ordinary speech. The
+  Windows hotkey stops recording after five minutes.
+- Faithful transcription only. No cleanup mode, no text-to-speech, no invented
+  OpenAI model aliases. The `model` field clients send is ignored; there is one
+  engine.
+- Needs an NVIDIA graphics card with CUDA. This runs on the laptop, not the
+  always-on mini PC, so dictation is unavailable while the laptop is asleep.
 - Run one Uvicorn worker. Sessions are revoked on restart. Audit metadata expires
   after seven days when the service is used; it contains no submitted content.
-- Server deployment uses the canonical private Caddy router and `/tts-stt` path.
-  Do not run the obsolete per-app Tailscale Serve commands in older planning docs.
 
 ## Verification
 
@@ -53,7 +54,13 @@ See [setup and recovery](docs/setup.md), [Windows dictation](client/README.md), 
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Tests use simulated Gemini responses; no provider call or charge occurs. See
-[the compatibility contract](docs/contract.md) for supported fields and limitations.
-Google account setup, real speech, owner sign-in, phone acceptance and deployment
-must be verified separately before calling the complete V1 project accepted.
+The tests use a stand-in for the speech engine, so they run without a graphics
+card. To check the real engine on an audio file:
+
+```powershell
+.\.venv\Scripts\python.exe -m app.whisper "C:\path\to\recording.wav"
+```
+
+See [the compatibility contract](docs/contract.md) for supported fields and
+limitations. Real phone dictation and the Windows paste still need verifying on
+the actual devices.

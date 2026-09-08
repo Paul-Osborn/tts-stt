@@ -1,106 +1,67 @@
-# Spec — Version 1 Multi-Provider Speech Hub
+# Spec — local speech-to-text hub
+
+Supersedes the multi-provider Version 1 specification, which is dead. The owner replaced the
+cloud provider with a local model on 2026-09-08; the reasoning is in
+`docs/local-stt-direction.md` and the history is in `WORKLOG.md`.
 
 ## Outcome
 
-A private, self-hosted FastAPI speech hub on Minisforum. It gives the owner's Android, tablet,
-and Windows clients OpenAI-compatible transcription and speech endpoints under the existing
-`/tts-stt` mount, plus a Voice Control Center and mounted tester. The hub, its routing,
-settings, credentials, and audit records stay on the owner's server; selected external providers
-receive submitted audio or text to process. This is private infrastructure, not end-to-end local
-or private processing.
+A private FastAPI hub that transcribes finished recordings with a local Whisper model on the
+owner's laptop GPU, mounted at `/tts-stt` and reachable over Tailscale. It gives the owner's
+Android, tablet and Windows clients the OpenAI-compatible transcription endpoint they already
+speak, plus an owner-only control page and a browser tester. Nothing leaves the machine.
 
-## Version 1 scope
+## Scope
 
-- A shared secure hub core and versioned compatibility contract for `POST /v1/audio/transcriptions`,
-  `POST /v1/audio/speech`, `GET /v1/models`, and `GET /health`.
-- Audited adapters for Gemini, OpenRouter, and one vetted generic OpenAI-compatible audio provider.
-  A Control Center can add credentials and enable a verified profile only for those code-defined
-  provider types. A new/custom API requires a small adapter change, conformance proof, and a
-  separate approval; arbitrary pasted endpoint URLs are never accepted.
-- One distinct, revocable hub credential per Android/tablet/Windows client. It is shown once on
-  issue, stored durably as a verifier only, cannot be exported from the browser, and supports
-  revoke/replace. It is never a provider credential.
-- Voice Control Center access through Google sign-in restricted to the configured owner subject
-  and email allowlist, plus a separately protected emergency recovery password and process.
-  The actual owner account and recovery values are setup-time secrets, never documentation.
-- Provider profiles are allowlisted and live-proven. The UI shows the chosen provider/profile and
-  its processing disclosure. There is no arbitrary model/service selection, silent substitution,
-  or automatic cross-provider fallback.
-- Gemini is the first vertical proof: secure core, one Gemini STT profile, one Gemini TTS profile,
-  mounted tester, and one real device. OpenRouter and generic-compatible profiles follow only
-  after the same profile-by-profile proof gates.
+- `POST /v1/audio/transcriptions`, `GET /v1/models`, `GET /health` under the existing mount.
+- Whisper `large-v3-turbo` through faster-whisper/CTranslate2 on the RTX 3060, loaded once at
+  startup and kept resident. Transcription runs off the request thread.
+- One distinct, revocable hub credential per client. Shown once on issue, stored as a verifier
+  only, cannot be exported from the browser.
+- Owner control page behind Google sign-in restricted to the configured subject and email, with
+  a separately protected recovery password.
+- Browser tester for recording and transcribing.
 
 ## Endpoint behavior
 
-- Faithful transcription is the default. Light Cleanup is tester-only and deferred until endpoint
-  evidence supports it.
-- Explicit valid client values override server defaults. Unsupported values fail clearly; they do
-  not silently select another model or provider.
+- Faithful transcription. No cleanup, rewriting or summarising.
+- The whole recording is transcribed. Nothing decides the speaker has finished.
+- The `model` field is accepted and ignored — keyboards hardcode `whisper-1` and there is one
+  engine. Unsupported response formats and unknown fields still fail clearly.
+- One transcription at a time; a concurrent request is refused, not queued.
+- Uploads capped at 25 MB.
 - The canonical external base URL comes from fixed deployment configuration, never request
   headers. Exactly one approved loopback/proxy mounted path is supported.
 
-## Security, credentials, and retention contract
+## Security and retention contract
 
-- No public exposure, Tailscale Funnel, or unapproved Tailscale/Caddy/server-route change. The
-  mounted `/tts-stt` contract remains; routing changes require the shared-server process.
-- Root secrets stay only in local `.env`: Gemini key, Google OAuth secret, provider-vault root or
-  encryption key, recovery secret, and equivalent root credentials. No secret enters source,
-  commits, logs, backups, or error messages.
-- Added provider credentials live only in a restricted server-side provider vault. Each value uses
-  atomic, provider-bound authenticated encryption under the server-held root, is never shown after
-  entry, and is excluded from plaintext logs and backups. The implementation must include root
-  custody, rotation, recovery, and loss runbooks; loss of the vault root means stored provider
-  credentials cannot be recovered and must be re-entered.
-- Google sign-in uses state, nonce, and PKCE; the server checks the fixed Google subject/email
-  allowlist. Sessions are secure, CSRF-protected, and require recent reauthentication for
-  sensitive settings, credential, and recovery actions.
-- Adapter destinations use fixed canonical provider origins, reject redirects, and validate every
-  outbound destination. Settings mutate only through an authenticated transactional service with
-  out-of-band mutation detection.
-- Audit events are content-free and have a defined retention period. Never retain transcript or
-  audio history, raw request headers, secrets, provider error bodies, or user content. Temporary
-  files, logs, crash material, proxy-failure injection, and stale-cleanup proof are ephemeral.
-- Gemini is intended for the API Free Tier only: do not link billing for this API project. Enforce
-  hard request/resource limits rather than an invented dollar cap. Selected models and Free Tier
-  availability must be verified at setup time. Google Free Tier handling follows Google's current
-  terms; the hub promises no server-side content history, not control of provider retention.
-- OpenRouter is first class for existing credits and qualifying free models. Capability, credit,
-  and free-status evidence is owner-triggered, timestamped, and never guessed or auto-probed on
-  page load.
+- **No outbound network call.** Adding one is a change to this spec, not a pull request.
+- No public exposure, Tailscale Funnel, or unapproved Tailscale/Caddy/server-route change.
+- Root secrets stay only in local `.env`: the state store's encryption key, the Google OAuth
+  secret and the recovery verifier. No secret enters source, commits, logs, backups or errors.
+- Google sign-in uses state, nonce and PKCE and checks the fixed subject/email allowlist.
+  Sessions are secure, CSRF-protected, and require recent reauthentication for device changes.
+- Audio is transcribed in memory and never written to disk, including by the engine. Audit
+  events are content-free and expire after seven days. No transcript or audio history.
+- Host and Origin are validated against the single configured base address.
 
-## Compatibility and proof gates
+## Proof gates
 
-- Maintain a versioned hub compatibility contract and semantic adapter conformance suite.
-- Each enabled profile passes configuration validation, fixed-origin checks, authenticated tester
-  proof, endpoint contract tests, content-free audit checks, and real-device acceptance before it
-  can be offered to a client.
-- Test the service through the mounted path, not only at root. Prove ephemeral cleanup with stale
-  temporary/crash/log and proxy-failure-injection cases.
-
-## Phased delivery
-
-1. **Secure core and Gemini proof:** compatibility contract, credential lifecycle, Control Center
-   protection, provider vault, audit/retention controls, one Gemini STT and one Gemini TTS profile,
-   mounted tester, and one real device.
-2. **OpenRouter proof:** enable independently after the same adapter, profile, and real-device gates.
-3. **Generic-compatible proof:** enable independently after the same gates.
+- Contract tests run without a GPU using a stand-in engine: mounted routes, authentication,
+  revocation, upload bounds, error redaction, state tamper detection.
+- `python -m app.whisper <file>` proves the real engine on real audio.
+- Real-device acceptance — phone dictation over Tailscale, Windows paste into a focused window —
+  is verified on the actual devices before a client is called accepted.
 
 ## Deferred / out of scope
 
-- Application code, provider account calls, Google OAuth configuration, deployment, and shared
-  server routing changes until a separately approved implementation phase.
-- Custom Android IME development, multi-user/SaaS billing, heavy local speech models, arbitrary
-  custom provider URLs, automatic provider fallback, transcript/audio history, and browser export
-  of client or provider credentials.
+- Text-to-speech. May return later as a local model.
+- Any cloud provider, provider vault, or custom provider URL.
+- Custom Android keyboard development, multi-user, billing, transcript history.
+- Moving the model to the mini PC. Reconsider only if the sleeping-laptop problem bites in a
+  week of real use.
 
-## Setup-time verification items
+## Known limitation
 
-- Owner Google subject/email, recovery procedure, canonical base URL, provider profile capability,
-  exact Gemini models and Free Tier availability, OpenRouter credit/free status, and real-device
-  results are verified during setup; none are assumed by this specification.
-
-## Acceptance for implementation authorization
-
-The first implementation phase is authorized only after the owner approves this spec and the
-Gemini vertical slice has evidence for every gate above. Provider expansions require their own
-profile evidence; passing Gemini does not approve or imply other providers.
+The hub is unavailable while the laptop is asleep. Accepted by the owner as the price of the
+larger, more accurate model.

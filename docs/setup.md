@@ -45,16 +45,14 @@ Local emergency commands (on the hub computer, prompted for recovery password):
 
 If Google sign-in is unavailable, these commands recover device access. Repair
 the owner allowlist/OAuth configuration locally and restart; the browser has no
-password bypass. To replace a provider key, save the new key in settings and revoke
-the old one at Google. Deleting a vault key does not remove a separate `.env` key;
-the UI says when one remains.
+password bypass.
 
 Root rotation/loss uses deliberate re-enrollment, avoiding a fragile migration:
-stop the service; revoke old provider/device credentials; remove the old `.state`
-and root/recovery entries locally; run `init`; enter fresh provider credentials;
-issue replacement device keys; restart and verify. This invalidates every old
-device and session. Keep the service stopped throughout. Never restore old state
-after revocation. No plaintext secret export or vault backup is supported.
+stop the service; revoke old device credentials; remove the old `.state` and
+root/recovery entries locally; run `init`; issue replacement device keys; restart
+and verify. This invalidates every old device and session. Keep the service stopped
+throughout. Never restore old state after revocation. No plaintext secret export or
+state backup is supported.
 
 ## Minisforum deployment (pending live verification)
 

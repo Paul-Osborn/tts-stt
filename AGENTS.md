@@ -9,8 +9,9 @@ This file is your standing instructions. Read it as rules, not background.
 
 ## What this project is
 
-A private self-hosted FastAPI multi-provider speech hub providing OpenAI-compatible STT/TTS for
-Android/tablet/Windows clients. Hub control and credentials stay local; selected providers process submitted content.
+A private self-hosted FastAPI speech-to-text hub for Android/tablet/Windows clients. It exposes the
+OpenAI-compatible `/v1/audio/transcriptions` endpoint and transcribes with a local Whisper model on
+the laptop GPU. Nothing leaves the machine — the hub makes no outbound request.
 
 ## How to run it
 
@@ -57,8 +58,8 @@ lost — but commit deliberately with good messages rather than relying on it.
   small supporting refactors, and documentation. Defer unrelated cleanup.
 - Match the existing style and comment density. Don't reformat untouched code.
 - Pin dependencies and justify any new one in the PR. Respect the hard constraints in
-  `REPO_RULES.md`: private mounted hub, root secrets only in `.env`, encrypted provider vault,
-  per-client revocable credentials, fixed provider origins, and OpenAI-compatible audio endpoints.
+  `REPO_RULES.md`: private mounted hub, root secrets only in `.env`, per-client revocable
+  credentials, no outbound network call, and the OpenAI-compatible transcription endpoint.
 - Never put a secret (key, token, password) in code, config, or a commit message. The secret
   scanner blocks commits that contain one — fix the cause, don't route around it.
 - Never hand-edit a dependency lockfile; change the manifest and let the package manager regenerate it.
