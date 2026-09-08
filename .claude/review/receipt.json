@@ -1,8 +1,9 @@
 {
-  "sha": "004d415a443ca0d19ca3b6e79ca1af96c1f60d05",
-  "codeDigest": "551228c38e876da037544cf560b1f75895d9cd4d84e969b24cf313d0eddabe79",
-  "reviewer": "code-reviewer",
-  "verdict": "PASS",
-  "reviewedAt": "2026-09-06T15:40:09.9860948Z",
-  "findings": "No material findings."
+  "codeDigest": "770961a7042f965b233930193c5a4a337deefd888a732c02f244aa35edd7ae5f",
+  "sha": "e88f7ecb4edb11f260f278078486632180d576f1",
+  "verdict": "CHANGES_ADDRESSED",
+  "reviewedAt": "2026-09-08T20:25:11.1561991Z",
+  "reviewer": "final_review",
+  "reviewBase": "e0f7e85",
+  "findings": "Scoped implementation review: fixed recorder concurrency and signed auth_time recency, regression checks passed. Inherited planning/governance remains owner-merge-only."
 }
