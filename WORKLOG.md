@@ -19,6 +19,13 @@
   voice, which has no prosody to punctuate from — its transcript comes back unpunctuated, exactly
   as predicted); Android keyboard dictation; the Windows physical paste.
 - **Next:** record one real sentence to settle punctuation, then set up the phone keyboard.
+- **Blocker found for phone use (2026-09-08, not yet fixed):** `app/config.py` only accepts a
+  base address on localhost or `gitserver.tail97bf76.ts.net`. The model now runs on the laptop,
+  whose Tailscale name is `leeloo.tail97bf76.ts.net`, so the phone has no address it is allowed
+  to use. The fix is to allow the laptop's own Tailscale hostname in `Settings.__post_init__`
+  and serve it with `tailscale serve` on the laptop pointing at loopback `127.0.0.1:8766`
+  (keeps the loopback binding rule). `docs/android_setup.md` still names the mini PC address and
+  needs the same correction. Not done here because PR #4 is already open and reviewed.
 
 ## 2026-09-08 — Local GPU transcription proven on the laptop
 - **Branch:** `feat/local-whisper`
