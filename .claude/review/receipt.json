@@ -1,9 +1,9 @@
 {
-  "codeDigest": "05010c185c89333906448d5ae6b150a914e90b04e94188d8f33de05957d26fa9",
-  "sha": "b02cd14d90c48405c8e7c809e77694d062d16f51",
-  "verdict": "CHANGES_ADDRESSED",
-  "reviewedAt": "2026-09-08T21:20:00Z",
+  "codeDigest": "75c812cc1b33374e8bc17bc17eab8499f95cf087a4562e618ffc1d83b21a81ed",
+  "sha": "c1acf4f70d1b17f151b664bfd35fc8162a88a019",
+  "verdict": "PASS",
+  "reviewedAt": "2026-09-08T22:05:00Z",
   "reviewer": "code-reviewer",
-  "reviewBase": "ee78688086c3a31ce85ca32592187efe610c7076",
-  "findings": "Reviewed the full branch diff against main. (1) The receipt then on disk covered commit e88f7ec, nine commits stale - replaced by this one. (2) Reviewer confirmed the PR touches AGENTS.md and REPO_RULES.md, so it is the owner's to merge, not the agent's. (3) docs/setup.md acceptance checklist still named audible TTS, Free Tier limits and provider failure - rewritten, and the Minisforum section marked as not the current plan. (4) Reviewer called requests==2.34.2 unused and it was removed; a follow-up verification proved that wrong - faster_whisper.utils imports requests at package import time without declaring it, so a fresh install would fail to load the model. The pin was restored with a comment. No regressions found in the origin/host guard, session/CSRF wall, device-key auth and revocation, the single-flight lock, or the no-audio-to-disk and no-outbound-call claims."
+  "reviewBase": "e8154170",
+  "findings": "Reviewed the base-address widening from one fixed host to the owner's tailnet suffix. No material defects. Confirmed base_url is operator config from .env and never request input, so the suffix match is not a request-time vector; the guard middleware still exact-matches Host and Origin against the single configured authority. Confirmed the leading dot in '.tail97bf76.ts.net' rejects both a bare tail97bf76.ts.net and lookalikes such as tail97bf76.ts.net.evil.example. Confirmed the new test exercises the accept and reject paths rather than passing vacuously, and that docs/android_setup.md matches the code (loopback binding, port 8766, the tailscale serve command). One cosmetic nit - trailing blank lines in docs/android_setup.md - fixed in c1acf4f."
 }
