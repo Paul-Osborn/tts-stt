@@ -32,7 +32,7 @@ def load(device='cuda', compute_type='float16'):
     return _model
 
 
-async def transcribe(audio, mime='', language=''):
+async def transcribe(audio, language=''):
     import anyio
     return await anyio.to_thread.run_sync(lambda: _transcribe(audio, language))
 

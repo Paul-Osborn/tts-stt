@@ -68,20 +68,6 @@ class Store:
         with self.connect() as db:
             db.execute('DELETE FROM records WHERE id = ?', (name,))
 
-    def reserve(self):
-        # ponytail: one process / one request at a time; scale only after measured need.
-        now = int(time.time())
-        with self.connect() as db:
-            db.execute('BEGIN IMMEDIATE')
-            db.execute('DELETE FROM audit WHERE at < ?', (now - 7 * 86400,))
-            minute, day = db.execute(
-                "SELECT SUM(at > ?), COUNT(*) FROM audit WHERE operation = 'request' AND at > ?",
-                (now - 60, now - 86400)).fetchone()
-            if (minute or 0) >= 5 or day >= 100:
-                return False
-            db.execute("INSERT INTO audit VALUES (?, 'request', 0)", (now,))
-        return True
-
     def audit(self, operation, status):
         with self.connect() as db:
             db.execute('DELETE FROM audit WHERE at < ?', (int(time.time()) - 7 * 86400,))

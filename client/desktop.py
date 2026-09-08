@@ -9,7 +9,6 @@ import httpx
 from dotenv import load_dotenv
 
 from app.config import ROOT, Settings
-from app.gemini import STT
 
 
 def main():
@@ -26,7 +25,7 @@ def main():
     user32 = ctypes.windll.user32
     user32.GetForegroundWindow.restype = ctypes.c_void_p
     pressed = lambda: bool(user32.GetAsyncKeyState(0x77) & 0x8000)  # F8
-    print('Hold F8 to speak (20 seconds maximum). Release to paste. Ctrl+C quits.')
+    print('Hold F8 to speak (5 minutes maximum). Release to paste. Ctrl+C quits.')
     try:
         while True:
             if not pressed():
@@ -36,7 +35,7 @@ def main():
             pcm = bytearray()
             try:
                 with sd.RawInputStream(samplerate=16000, channels=1, dtype='int16') as mic:
-                    while pressed() and len(pcm) < 640000:
+                    while pressed() and len(pcm) < 9_600_000:  # 5 minutes at 16 kHz mono
                         data, overflow = mic.read(1600)
                         if overflow:
                             raise RuntimeError('Microphone could not keep up. Try again.')
@@ -49,10 +48,10 @@ def main():
                     audio.writeframes(pcm)
                 with httpx.Client(timeout=75, follow_redirects=False, trust_env=False) as client:
                     response = client.post(settings.base_url + '/v1/audio/transcriptions',
-                        headers={'Authorization': 'Bearer ' + key}, data={'model': STT},
+                        headers={'Authorization': 'Bearer ' + key},
                         files={'file': ('dictation.wav', output.getvalue(), 'audio/wav')})
                 if response.status_code != 200:
-                    print('Dictation failed. Check the web tester for account or quota status.')
+                    print('Dictation failed. Check that the hub is running, then retry.')
                     continue
                 text = response.json()['text']
                 if text:

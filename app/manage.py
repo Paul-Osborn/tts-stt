@@ -32,7 +32,7 @@ def main():
         set_key(path, 'HUB_ROOT_KEY', base64.urlsafe_b64encode(secrets.token_bytes(32)).decode())
         set_key(path, 'RECOVERY_VERIFIER', salt.hex() + ':' + verifier)
         os.chmod(path, 0o600)
-        print('Initialized. Keep .env private. Now add your Gemini key and confirm Free Tier.')
+        print('Initialized. Keep .env private. Now start the hub and issue a device key.')
         return
     values = dotenv_values(path)
     try:

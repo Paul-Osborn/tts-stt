@@ -13,8 +13,6 @@ load_dotenv(ROOT / '.env')
 class Settings:
     base_url: str = os.getenv('HUB_BASE_URL', 'http://localhost:8766/tts-stt')
     root_key: str = os.getenv('HUB_ROOT_KEY', '')
-    gemini_key: str = os.getenv('GEMINI_API_KEY', '')
-    free_tier: bool = os.getenv('GEMINI_FREE_TIER_CONFIRMED') == 'yes'
     google_id: str = os.getenv('GOOGLE_CLIENT_ID', '')
     google_secret: str = os.getenv('GOOGLE_CLIENT_SECRET', '')
     owner_sub: str = os.getenv('GOOGLE_OWNER_SUB', '')

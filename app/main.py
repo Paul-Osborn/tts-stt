@@ -8,28 +8,19 @@ from authlib.integrations.starlette_client import OAuth
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
-from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.sessions import SessionMiddleware
 
-from . import gemini
+from . import whisper
 from .config import Settings
 from .store import Store
 
-MAX_BODY = 1024 * 1024
+# Long enough for several minutes of speech; the point of this hub is not being cut off.
+MAX_BODY = 25 * 1024 * 1024
 STATIC = Path(__file__).parent / 'static'
 
 
 def error(status, message):
     return JSONResponse({'error': {'message': message, 'type': 'hub_error', 'code': status}}, status_code=status)
-
-
-class Speech(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    model: str = gemini.TTS
-    input: str = Field(min_length=1, max_length=2000)
-    voice: str = 'Kore'
-    response_format: str = 'wav'
-    speed: float = 1
 
 
 def create_app(settings=None):
@@ -39,6 +30,7 @@ def create_app(settings=None):
 
     @asynccontextmanager
     async def lifespan(app):
+        whisper.load()  # Pay the model load once at startup, not on the first dictation.
         yield
 
     outer = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
@@ -72,14 +64,6 @@ def create_app(settings=None):
             return
         owner(request)
 
-    def provider_key():
-        if not store or not settings.free_tier:
-            raise HTTPException(503, 'Complete setup and confirm a Gemini project with billing disabled')
-        key = store.get('provider:gemini', '') or settings.gemini_key
-        if not key:
-            raise HTTPException(503, 'Add your Gemini key in Settings or the local .env file')
-        return key
-
     @hub.exception_handler(HTTPException)
     async def http_error(request, exc):
         return error(exc.status_code, exc.detail)
@@ -102,13 +86,13 @@ def create_app(settings=None):
                 async for chunk in request.stream():
                     body.extend(chunk)
                     if len(body) > MAX_BODY:
-                        return error(413, 'Recording too large. Use a shorter clip (under 20 seconds).')
+                        return error(413, 'Recording too large. Use a shorter clip.')
                 request._body = bytes(body)
             response = await call_next(request)
         except TimeoutError:
             return error(408, 'Upload took too long')
         except Exception:
-            # Provider errors, malformed state and tracebacks never disclose request content.
+            # Engine errors, malformed state and tracebacks never disclose request content.
             return error(503, 'Hub unavailable. Check local setup or restore the authenticated state store.')
         response.headers.update({'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff',
                                  'Referrer-Policy': 'no-referrer',
@@ -117,7 +101,7 @@ def create_app(settings=None):
 
     @hub.get('/health')
     async def health():
-        return {'status': 'ok' if store else 'setup_required', 'contract': '1.0', 'provider': 'Gemini'}
+        return {'status': 'ok' if store else 'setup_required', 'contract': '1.0', 'provider': 'local'}
 
     @hub.get('/')
     async def index():
@@ -161,9 +145,9 @@ def create_app(settings=None):
     @hub.get('/control')
     async def control(request: Request):
         session = owner(request)
-        return {'csrf': session['csrf'], 'ready': bool(settings.free_tier and (settings.gemini_key or store.get('provider:gemini'))),
+        return {'csrf': session['csrf'],
                 'devices': [{'id': ident, 'label': value['label']} for ident, value in store.devices()],
-                'stt': gemini.STT, 'tts': gemini.TTS, 'voices': gemini.VOICES}
+                'stt': whisper.MODEL}
 
     @hub.post('/control/logout')
     async def logout(request: Request):
@@ -190,36 +174,16 @@ def create_app(settings=None):
         store.audit('device_revoke', 200)
         return {'ok': True}
 
-    @hub.post('/control/provider')
-    async def save_provider(request: Request):
-        owner(request, recent=True)
-        data = await request.json()
-        key = data.get('key')
-        if not isinstance(key, str) or not 10 <= len(key) <= 256:
-            raise HTTPException(400, 'Enter a valid Gemini API key')
-        store.put('provider:gemini', key)
-        store.audit('provider_replace', 200)
-        return {'ok': True}
-
-    @hub.delete('/control/provider')
-    async def delete_provider(request: Request):
-        owner(request, recent=True)
-        store.delete('provider:gemini')
-        store.audit('provider_delete', 200)
-        return {'ok': True, 'env_key_present': bool(settings.gemini_key)}
-
     @hub.get('/v1/models')
     async def models(request: Request):
         authorize(request)
-        return {'object': 'list', 'data': [{'id': model, 'object': 'model', 'created': 0,
-                 'owned_by': 'google'} for model in (gemini.STT, gemini.TTS)]}
+        return {'object': 'list', 'data': [{'id': whisper.MODEL, 'object': 'model', 'created': 0,
+                 'owned_by': 'local'}]}
 
     async def run(operation, work):
         if lock.locked():
             raise HTTPException(429, 'Another recording is processing. Try again shortly.')
         async with lock:
-            if not store.reserve():
-                raise HTTPException(429, 'Hub limit reached (5 requests/minute, 100/day)')
             try:
                 result = await work()
             except HTTPException as exc:
@@ -231,39 +195,28 @@ def create_app(settings=None):
     @hub.post('/v1/audio/transcriptions')
     async def transcriptions(request: Request):
         authorize(request)
-        key = provider_key()
         async with request.form(max_files=1, max_fields=4, max_part_size=MAX_BODY) as form:
             if set(form) - {'file', 'model', 'language', 'response_format'}:
                 raise HTTPException(400, 'Unsupported transcription option')
-            model = form.get('model', gemini.STT)
             fmt = form.get('response_format', 'json')
             language = form.get('language', '')
-            if model != gemini.STT or fmt not in ('json', 'text'):
-                raise HTTPException(400, 'Unsupported model or response format')
+            # The model field is accepted and ignored: keyboards hardcode 'whisper-1'
+            # and there is exactly one local engine to route to.
+            if fmt not in ('json', 'text'):
+                raise HTTPException(400, 'Unsupported response format')
             if not isinstance(language, str) or (language and (len(language) != 2 or not language.isalpha())):
                 raise HTTPException(400, 'Language must be a two-letter code')
             upload = form.get('file')
             if not hasattr(upload, 'filename'):
                 raise HTTPException(400, 'An audio file is required')
-            extension = (upload.filename or '').rsplit('.', 1)[-1].lower()
-            mime = gemini.MIMES.get(extension)
-            if not mime:
+            if (upload.filename or '').rsplit('.', 1)[-1].lower() not in whisper.EXTENSIONS:
                 raise HTTPException(400, 'Use WAV, MP3, M4A, OGG, FLAC, AAC or WebM audio')
             audio = await upload.read()
             if not audio:
                 raise HTTPException(400, 'Recording is empty')
-            text = await run('stt', lambda: gemini.transcribe(key, audio, mime, language))
+            text = await run('stt', lambda: whisper.transcribe(audio, language))
         return Response(text, media_type='text/plain') if fmt == 'text' else {'text': text}
 
-    @hub.post('/v1/audio/speech')
-    async def speech(request: Request, body: Speech):
-        authorize(request)
-        key = provider_key()
-        if (body.model != gemini.TTS or body.voice not in gemini.VOICES
-                or body.response_format not in ('wav', 'pcm') or body.speed != 1 or not body.input.strip()):
-            raise HTTPException(400, 'Use a listed model/voice, WAV or PCM, and speed 1')
-        audio = await run('tts', lambda: gemini.speak(key, body.input, body.voice, body.response_format))
-        return Response(audio, media_type='audio/wav' if body.response_format == 'wav' else 'application/octet-stream')
 
     hub.add_middleware(SessionMiddleware, secret_key=settings.root_key or secrets.token_hex(32),
                        session_cookie='speech_session', max_age=3600, same_site='lax',
