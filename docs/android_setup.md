@@ -36,5 +36,3 @@ short sentence into a notes app. Verify punctuation, actual insertion, and that
 revoking its device key prevents further transcription. Record the app version
 and results before considering the phone accepted. Repeat with a different key
 for the tablet. Until then, the authenticated browser tester can test dictation.
-
-
