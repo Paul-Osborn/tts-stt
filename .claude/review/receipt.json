@@ -1,9 +1,9 @@
 {
-  "codeDigest": "770961a7042f965b233930193c5a4a337deefd888a732c02f244aa35edd7ae5f",
-  "sha": "e88f7ecb4edb11f260f278078486632180d576f1",
+  "codeDigest": "1078768f8d8524c94b1e32b57e1028047f2daaed73d506ede3e04dcb60e18f5a",
+  "sha": "bfdf4c300f9e531cbbc10fd2056b8dc0d20f9007",
   "verdict": "CHANGES_ADDRESSED",
-  "reviewedAt": "2026-09-08T20:25:11.1561991Z",
-  "reviewer": "final_review",
-  "reviewBase": "e0f7e85",
-  "findings": "Scoped implementation review: fixed recorder concurrency and signed auth_time recency, regression checks passed. Inherited planning/governance remains owner-merge-only."
+  "reviewedAt": "2026-09-08T21:20:00Z",
+  "reviewer": "code-reviewer",
+  "reviewBase": "ee78688086c3a31ce85ca32592187efe610c7076",
+  "findings": "Reviewed the full branch diff against main. (1) The receipt then on disk covered commit e88f7ec, nine commits stale - replaced by this one. (2) Reviewer confirmed the PR touches AGENTS.md and REPO_RULES.md, so it is the owner's to merge, not the agent's. (3) docs/setup.md acceptance checklist still named audible TTS, Free Tier limits and provider failure - rewritten, and the Minisforum section marked as not the current plan. (4) Reviewer called requests==2.34.2 unused and it was removed; a follow-up verification proved that wrong - faster_whisper.utils imports requests at package import time without declaring it, so a fresh install would fail to load the model. The pin was restored with a comment. No regressions found in the origin/host guard, session/CSRF wall, device-key auth and revocation, the single-flight lock, or the no-audio-to-disk and no-outbound-call claims."
 }
