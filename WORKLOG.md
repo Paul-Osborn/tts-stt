@@ -1,5 +1,25 @@
 # Work log — tts-stt
 
+## 2026-09-08 — Local engine wired in; the cloud provider is gone
+- **Branch:** `feat/local-whisper`
+- **Changed:** `/v1/audio/transcriptions` now runs the local Whisper engine. Deleted
+  `app/gemini.py`, `POST /v1/audio/speech` and its half of the tester, the encrypted provider
+  vault, the free-tier gate and the request quota. Rewrote `PRD.md`, `REPO_RULES.md`, `AGENTS.md`
+  and `SPEC.md`, which still forbade local models and capped the server at 200 MB of RAM.
+  Retired `docs/implementation.md`.
+- **Limits changed on purpose:** the 1 MB body cap and the 5/minute quota existed to protect a
+  free tier that no longer exists, and they were also a second thing cutting the owner off.
+  Uploads now cap at 25 MB (~10 minutes of speech) and the F8 hotkey records for up to 5 minutes.
+  The `model` field is accepted and ignored so keyboards that hardcode `whisper-1` just work.
+- **Verified:** real end-to-end run through the mounted endpoint on the GPU — startup model load
+  6.2s, first request 2.1s, steady state **0.7s**, correct transcript, and the audio bytes are
+  provably absent from the state database. 6 Python tests and the recorder regression pass without
+  a GPU (stand-in engine).
+- **Still unproven:** punctuation on a real human voice (the test clip is the Windows synthetic
+  voice, which has no prosody to punctuate from — its transcript comes back unpunctuated, exactly
+  as predicted); Android keyboard dictation; the Windows physical paste.
+- **Next:** record one real sentence to settle punctuation, then set up the phone keyboard.
+
 ## 2026-09-08 — Local GPU transcription proven on the laptop
 - **Branch:** `feat/local-whisper`
 - **Direction change:** the owner replaced the cloud provider with local models, speech-to-text

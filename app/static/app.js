@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 let csrf = '', deviceKey = '', busy = false, recording = false, recorder, stream;
-const stt = 'whisper-large-v3-turbo';
+const stt = 'large-v3-turbo';
 const status = text => { $('status').textContent = text; };
 async function api(path, options = {}) {
   const headers = { ...options.headers };
