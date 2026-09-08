@@ -12,6 +12,11 @@
   forms. `docs/android_setup.md` now points at `leeloo.tail97bf76.ts.net` and carries the one
   `tailscale serve` command that publishes the loopback hub on it.
 - **Still unproven:** the Android keyboard itself. No APK has been tested.
+- **Gotcha:** `tailscale serve --set-path=/tts-stt` strips the prefix before forwarding, so the
+  mounted hub sees `/` and returns `{"detail":"Not Found"}`. Proxy the root instead:
+  `tailscale serve --bg --https=443 8766`. Same single-root-proxy shape as the mini PC.
+- **Verified on the phone:** the hub page loads at `https://leeloo.tail97bf76.ts.net/tts-stt/`
+  over Tailscale.
 
 ## 2026-09-08 — Local engine wired in; the cloud provider is gone
 - **Branch:** `feat/local-whisper`
