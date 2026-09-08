@@ -7,8 +7,12 @@ whenever you want to dictate from the phone.
 On the laptop, publish the hub on its private Tailscale address once:
 
 ```powershell
-tailscale serve --bg --https=443 --set-path=/tts-stt 8766
+tailscale serve --bg --https=443 8766
 ```
+
+Proxy the root, not `--set-path=/tts-stt`: Tailscale strips the path it is given
+before forwarding, so a `/tts-stt` mount hands the hub a request for `/` and the
+hub answers `Not Found`. This mirrors the mini PC's single root proxy.
 
 Start the hub with `HUB_BASE_URL=https://leeloo.tail97bf76.ts.net/tts-stt` in
 `.env`, then confirm `https://leeloo.tail97bf76.ts.net/tts-stt/` opens in the
