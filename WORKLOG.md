@@ -1,5 +1,18 @@
 # Work log — tts-stt
 
+## 2026-09-08 — Punctuation proven, and the phone can now reach the hub
+- **Branch:** `fix/laptop-tailscale-address`
+- **Punctuation settled:** the owner recorded a real sentence through the browser tester on the
+  GPU and the transcript came back punctuated. The synthetic-voice caveat from the earlier entry
+  is closed; nothing about punctuation is outstanding.
+- **Changed:** `app/config.py` accepted a base address only on localhost or
+  `gitserver.tail97bf76.ts.net`, so the phone had no address it was allowed to use now that the
+  model runs on the laptop. It now accepts any `*.tail97bf76.ts.net` host over HTTPS — the
+  owner's own Tailscale network, nothing public — with a test covering the accepted and rejected
+  forms. `docs/android_setup.md` now points at `leeloo.tail97bf76.ts.net` and carries the one
+  `tailscale serve` command that publishes the loopback hub on it.
+- **Still unproven:** the Android keyboard itself. No APK has been tested.
+
 ## 2026-09-08 — Local engine wired in; the cloud provider is gone
 - **Branch:** `feat/local-whisper`
 - **Changed:** `/v1/audio/transcriptions` now runs the local Whisper engine. Deleted

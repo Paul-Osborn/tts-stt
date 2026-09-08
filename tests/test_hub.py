@@ -105,3 +105,14 @@ def test_owner_auth_time_csrf_and_device_lifecycle(tmp_path, monkeypatch):
     assert client.delete('/tts-stt/control/devices/' + device['id']).status_code == 200
     assert client.post('/tts-stt/control/logout').status_code == 200
     assert client.get('/tts-stt/control').status_code == 401
+
+def test_base_url_allows_only_the_private_network():
+    for good in ('http://localhost:8766/tts-stt', 'https://leeloo.tail97bf76.ts.net/tts-stt',
+                 'https://gitserver.tail97bf76.ts.net/tts-stt'):
+        assert Settings(base_url=good).authority
+    for bad in ('http://leeloo.tail97bf76.ts.net/tts-stt',      # must be https off-machine
+                'https://evil.example/tts-stt',
+                'https://tail97bf76.ts.net.evil.example/tts-stt',
+                'https://leeloo.tail97bf76.ts.net/other'):
+        with pytest.raises(ValueError):
+            Settings(base_url=bad)
