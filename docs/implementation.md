@@ -9,7 +9,11 @@ Plan:
 - [x] Verifier-only device credentials, encrypted provider storage, owner control.
 - [x] Windows dictation helper and clear Android/setup instructions.
 - [x] Contract/security tests, local runtime check, one independent final review.
-- [ ] Commit and push the deliverable; record remaining setup/device evidence.
+- [x] Commit and push the deliverable; record remaining setup/device evidence.
+
+Published as Forgejo PR #3 against the planning branch. Both remotes contain the
+implementation. Do not merge/mark full V1 accepted before the pending planning
+ratification and account/device acceptance are resolved.
 
 Files: app/, client/, tests/, requirements.txt, .env.example, README.md and docs/.
 Use HTTPX directly for the fixed Gemini REST endpoint, avoiding an additional SDK.

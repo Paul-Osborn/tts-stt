@@ -6,6 +6,7 @@
 - **Verified:** 12 Python tests passed; `node tests/test_recorder.cjs` passed; Python compilation and JavaScript syntax passed. Running localhost page visually checked on port 8766 (8000 was occupied). One independent review found recording concurrency and recent Google auth-time issues; both corrected with regressions.
 - **Pending:** No `.env`/Gemini key supplied. No real Gemini audio, Google owner login, Windows physical paste, Android acceptance, or server deployment verified. OpenRouter/generic profiles remain deferred behind live evidence. Full V1 is not complete. Authenticated state detects ciphertext edits/swaps, not host-admin database deletion/rollback; documented limit requires further hardening before full original spec acceptance.
 - **Usage:** Account five-hour usage rose from 2% to 69% at final checks; finishing with a saved checkpoint to preserve allowance.
+- **Published:** Implementation `e88f7ec` pushed to Forgejo and GitHub. [PR #3](https://gitserver.tail97bf76.ts.net/git/paul/tts-stt/pulls/3) targets the planning branch; merge/acceptance remains pending. Local preview server stopped after verification.
 
 > **How to use this template:** Copy to `WORKLOG.md`. Append a dated entry whenever you finish
 > or meaningfully advance a task. Newest at the top. This is the project's memory between
