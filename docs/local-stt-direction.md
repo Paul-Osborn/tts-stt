@@ -39,18 +39,29 @@ privacy claim in `PRD.md` true rather than qualified.
 200 MB RAM. A local speech model breaks that cap. Those documents need rewriting as part of
 this change, not quietly ignored.
 
-## Open risk — where the compute runs
+## Where the compute runs — start on the laptop GPU
 
-The owner's RTX 3060 is in the **laptop**. The always-on machine reachable from away is the
-**Minisforum mini PC**, whose CPU/RAM are unverified (its SSH accepts git only, so it could not
-be inspected from the laptop). Building around the GPU would silently reduce "works away from
-home" to "works while the laptop is awake at home" — not acceptable.
+Two candidate machines: the owner's laptop (NVIDIA RTX 3060, 6 GB VRAM) and the always-on
+Minisforum mini PC (CPU/RAM unverified; its SSH accepts git only, so it could not be inspected).
 
-Therefore: run on the mini PC's CPU. The open question is latency after key release, expected
-in the range of a few seconds for a sentence or two. Model size is the quality/speed dial.
+**Correction to an earlier assessment in this file's first revision:** the laptop was ruled out
+on the grounds that it breaks "works away from home". That was wrong. Tailscale is a mesh, so
+the phone reaches the laptop directly wherever both are, provided both are connected. The
+actual limitation is narrower — **the laptop must be awake**. A sleeping laptop cannot be woken
+over the network to serve a request.
 
-**Step one of any implementation is measuring real transcription latency on the mini PC**
-across model sizes, before building anything on top of it.
+On quality the GPU wins outright, and that matters more than latency here. 6 GB fits the
+largest, most accurate Whisper model with a roughly one-second turnaround for a short clip.
+The mini PC's CPU would force a smaller model, with weaker punctuation and more misheard
+words — which is precisely the owner's stated complaint, so it is not a minor concession.
+
+**Decision: start on the laptop GPU.** The choice is cheap to reverse: the hub, the endpoint
+contract, the Android keyboard configuration and the security wall are identical either way,
+and only the model's location differs. A week of real use will show whether the sleeping-laptop
+problem bites in practice. If it does, move the model to the mini PC and accept a smaller one.
+
+The cost of keeping a gaming laptop awake continuously — fan noise, heat, and a battery held
+at full charge — is the reason not to make that the permanent answer without testing first.
 
 ## Not yet decided
 
