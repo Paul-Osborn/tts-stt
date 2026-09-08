@@ -1,0 +1,17 @@
+fastapi==0.141.1
+uvicorn==0.52.4
+python-multipart==0.0.32
+httpx==0.28.1
+python-dotenv==1.2.3
+cryptography==50.0.1
+authlib==1.8.0
+itsdangerous==2.2.0
+# Local speech-to-text on the GPU. The nvidia-* wheels are the CUDA runtime;
+# app/whisper.py puts them on PATH because Windows does not find them there.
+faster-whisper==1.2.0
+ctranslate2==4.8.2
+# faster_whisper.utils imports requests at package import time but does not
+# declare it, so a fresh install without this line cannot load the model.
+requests==2.34.2
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cudnn-cu12==9.25.1.1

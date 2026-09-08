@@ -13,13 +13,14 @@ the project working.
 ## 1. Scope & structure
 
 - Describe the intended shape of the project in one or two lines, so drift is obvious:
-  A Python FastAPI service under `app/` exposing OpenAI-compatible STT & TTS endpoints,
-  with client helpers under `client/`, web dashboard under `app/static/`, and tests under `tests/`.
+  A Python FastAPI speech-to-text hub under `app/` exposing the OpenAI-compatible transcription
+  endpoint over a local Whisper model, with a protected owner control page, client helpers under
+  `client/`, and tests under `tests/`.
 - Keep the layout predictable. Sketch the top-level structure:
 
   ```
   tts-stt/
-  ├─ app/                    # FastAPI server, endpoints, Gemini integration, web UI
+  ├─ app/                    # FastAPI server, endpoints, local Whisper engine, web UI
   ├─ client/                 # Windows desktop hotkey dictation client
   ├─ tests/                  # Unit and integration test suite
   ├─ requirements.txt        # Pinned Python dependencies
@@ -105,18 +106,20 @@ per project. Commit it **first**, before any code, so ignored files never enter 
 
 ### Pull requests
 - All changes reach `main` through a PR, even solo work — it's the review checkpoint.
-- Get reviewed, then merge it yourself. Before opening the PR, hand the diff to a reviewer agent; fix what's valid and record in the PR what you pushed back on and why. Once CI is green, `gh pr merge --squash --delete-branch`. Never merge red. Never use `--admin`.
+- Prose-only changes are review-exempt. Normal and high-risk work gets one independent final review after it is stable; record the outcome in `.claude/review/receipt.json`, fix valid findings, then open the PR.
+- Once CI is green, merge the branch you have checked out with `gh pr merge --squash --delete-branch`. Never merge a PR number from another branch, merge red, or use `--admin`.
 - **Authority ceiling:** A PR touching governance/rule files is the human's to merge, not yours.
 - PR description states: what changed, why, and how it was tested.
-- Keep PRs focused. A bug fix and a refactor are two PRs.
+- Keep PRs focused: one complete, shippable deliverable per branch, including its tests, supporting fixes, small supporting refactors, and documentation. Defer unrelated cleanup.
 - A PR must build / run / pass tests (green CI) before merge.
 
-### Plan before you code
+### Plan before you code — once
 
 - For anything beyond a one-line edit, write a short plan **before** implementing: which
   files change, what's explicitly out of scope, and how the result will be verified.
 - For a real feature, copy `SPEC.template.md` to `SPEC.md` and fill it in. The spec — not the
   code — is the thing to review and agree on first. Keep it updated as decisions change.
+- Reconfirm only when the approved goal, risk, or scope materially changes; routine implementation choices are the agent's to make.
 - This matters most with AI agents: without an explicit plan and scope, an agent fills the
   gaps with guesses and confidently builds the wrong thing.
 
@@ -132,7 +135,7 @@ per project. Commit it **first**, before any code, so ignored files never enter 
 ## 3a. Automatic git & guardrails (enforcement)
 
 Git is hands-off. Whichever agent picks up the project runs the whole workflow itself — branch,
-commit, push, review, open PR, and merge when CI is green (`gh pr merge --squash --delete-branch`).
+commit, push, review, open PR, and merge the checked-out branch when CI is green (`gh pr merge --squash --delete-branch`).
 PRs touching governance rules require human ratification.
 
 Written rules are only advice; an agent (or a tired human) forgets them. The rules that
@@ -143,10 +146,12 @@ bypassed, another still catches the problem ("defense in depth").
 - **Branch guard** — refuses any commit made on `main`/`master`. Branch first.
 - **Secret scan on commit** — Gitleaks refuses any commit containing a key, token, or
   password. This is the safety net behind §6.
+- **Large-file gate** — refuses a newly added file over the configured limit (2048 KB by default).
+- **Lockfile sanity check** — warns when a dependency lockfile changes without its manifest.
 - Install both once with `lefthook install`.
 
 **Claude Code-specific guardrails (via `.claude/settings.json` hooks — convenience for Claude):**
-- **Git guard** — `git-guard.ps1` denies commit/push on `main` early, enforces review receipts on `gh pr create`, gates `gh pr merge` on green CI status, and blocks self-merging governance changes.
+- **Git guard** — `git-guard.ps1` denies commit/push on `main`, enforces review receipts for substantive work, gates merges on green CI status, and blocks self-merging governance changes.
 - **Auto-commit on turn end** — `auto-commit.ps1` (Stop hook) commits and pushes any leftover
   work so nothing is lost. Never touches `main`; the secret scan still gates its commits.
 - **Protected paths** — `protect-paths.ps1` blocks edits to sensitive files/folders (including `.claude/settings.json`).
@@ -165,7 +170,10 @@ fix the underlying cause (branch first, remove the secret, etc.).
 
 - Pin versions for reproducibility (`==`, lockfiles, etc.).
 - Adding a dependency requires a one-line justification in the PR. Remove anything unused.
-- State any hard constraints here: local-first hub, API key in .env only, external network calls restricted to Google Gemini API (`generativelanguage.googleapis.com`), pinned dependencies.
+- Never hand-edit a generated dependency lockfile. Change its manifest and let the package manager regenerate the lockfile in the same commit.
+- State any hard constraints here: private mounted hub; root secrets only in `.env`; speech is
+  transcribed by a local model and the hub makes no outbound request at all; pinned dependencies,
+  including the CUDA runtime wheels the local engine loads.
 
 ---
 
@@ -173,7 +181,9 @@ fix the underlying cause (branch first, remove the secret, etc.).
 
 - Match the existing style and comment density. Don't reformat untouched code in a feature PR.
 - No dead code, no commented-out blocks, no debug-print spam left behind.
-- Preserve the project's core invariants: OpenAI API compatibility for audio endpoints (`/v1/audio/transcriptions` and `/v1/audio/speech`), asynchronous non-blocking audio handling, zero hardcoded secrets.
+- Preserve the project's core invariants: OpenAI API compatibility for `/v1/audio/transcriptions`,
+  transcription off the request thread so the server stays responsive, zero hardcoded secrets, and
+  no outbound network call from the hub.
 
 ---
 
@@ -181,7 +191,25 @@ fix the underlying cause (branch first, remove the secret, etc.).
 
 - No secret ever enters the repo — not in code, config, history, or a commit message.
 - Before pushing, scan the diff for keys, tokens, paths with usernames, and device serials.
-- State the network policy: Outbound network calls are allowed only to Google Gemini API (`generativelanguage.googleapis.com`) for audio transcription and speech synthesis. All inbound traffic is restricted to local network / Tailscale mesh.
+- State the network policy: inbound traffic is restricted to local network / Tailscale mesh. There
+  is no outbound traffic. Adding an outbound call — to a speech provider or anything else — is a
+  change to this rule and needs the owner's agreement, not a pull request that quietly makes one.
+- **Credentials:** Root secrets (the store's encryption key, Google OAuth, recovery) stay only in
+  `.env`. Each client receives a distinct verifier-only, revocable hub credential.
+- **Control Center:** Google sign-in is restricted to configured owner subject/email values, with
+  state/nonce/PKCE, secure session/CSRF/reauth, and a separately protected recovery process.
+- **Data handling:** keep no transcript/audio history. Audio is transcribed in memory and never
+  written to disk, including by the speech engine. Audit records are content-free and bounded;
+  logs, crash material, temporary files, raw headers and secrets never become retained content.
+- **Private Tailscale Serve:** Remote access is exposed strictly via `tailscale serve` over authenticated private Tailnet HTTPS addresses:
+  ```bash
+  tailscale serve --https=443 --set-path="/tts-stt" --bg --yes 8000
+  ```
+- **Tailscale URL & Naming Conventions:**
+  - Full origin URL pattern: `https://<node-name>.<tailnet-name>.ts.net<route-path>` (validated by `^https://[A-Za-z0-9.-]+\.ts\.net$ROUTE_PATH$`).
+  - Route path convention: Single lowercase hyphenated path (`^/[a-z0-9][a-z0-9-]*$`), default `/tts-stt`.
+- **No Tailscale Funnel:** Tailscale Funnel is strictly forbidden (`allow_funnel: false`) to prevent any exposure to the public internet.
+- **Origin & Host Guard:** The hub validates incoming `Host` and `Origin` headers, allowing only loopback (`127.0.0.1`, `localhost`, `::1`) and private Tailscale network origins (`*.ts.net` and `100.64.0.0/10` CGNAT range).
 - If a secret is ever committed, treat it as compromised: rotate it immediately, then scrub
   history (§7). Scrubbing alone is not enough — the key is burned.
 
@@ -196,7 +224,14 @@ fix the underlying cause (branch first, remove the secret, etc.).
 
 ---
 
-## 8. Releases / tags (optional)
+## 8. Governance version & updates
+
+`.governance-version` records this repository's governance-kit generation. Before a future
+upgrade, run the official updater with `-DryRun`; it replaces only unchanged, template-owned
+gates and leaves the project brief, specifications, filled-in rules, secrets configuration, and
+service code alone.
+
+## 9. Releases / tags (optional)
 
 - Tag working milestones with semantic versions: `v0.1.0`, `v0.2.0`.
 - A tagged commit must satisfy passing test suite and working audio transcription/synthesis verification.

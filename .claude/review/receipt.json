@@ -1,0 +1,9 @@
+{
+  "codeDigest": "05010c185c89333906448d5ae6b150a914e90b04e94188d8f33de05957d26fa9",
+  "sha": "b02cd14d90c48405c8e7c809e77694d062d16f51",
+  "verdict": "CHANGES_ADDRESSED",
+  "reviewedAt": "2026-09-08T21:20:00Z",
+  "reviewer": "code-reviewer",
+  "reviewBase": "ee78688086c3a31ce85ca32592187efe610c7076",
+  "findings": "Reviewed the full branch diff against main. (1) The receipt then on disk covered commit e88f7ec, nine commits stale - replaced by this one. (2) Reviewer confirmed the PR touches AGENTS.md and REPO_RULES.md, so it is the owner's to merge, not the agent's. (3) docs/setup.md acceptance checklist still named audible TTS, Free Tier limits and provider failure - rewritten, and the Minisforum section marked as not the current plan. (4) Reviewer called requests==2.34.2 unused and it was removed; a follow-up verification proved that wrong - faster_whisper.utils imports requests at package import time without declaring it, so a fresh install would fail to load the model. The pin was restored with a comment. No regressions found in the origin/host guard, session/CSRF wall, device-key auth and revocation, the single-flight lock, or the no-audio-to-disk and no-outbound-call claims."
+}

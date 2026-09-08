@@ -3,58 +3,83 @@
 > **What this is:** The project-level brief — what we're building and why. Created at project start and kept updated as decisions evolve.
 
 ## Problem / why
-Google Voice Typing is frustratingly inaccurate, lacks smart contextual formatting (handling punctuation, filler words, technical jargon), and relies entirely on closed, unowned services. The owner wants a private, responsive, self-hosted Speech-to-Text (STT) and Text-to-Speech (TTS) system they own and control, capable of replacing Google Voice Typing across their Android phone, Android tablet, and desktop PC.
+Google Voice Typing cuts the owner off before he has finished speaking and does not punctuate
+what it hears. Both come from the same design: it transcribes a live stream and decides for
+itself when the speaker has stopped. The owner wants dictation that waits until he is finished,
+punctuates properly, and belongs to him rather than to a closed service.
 
 ## Goal / outcome
-A self-hosted STT and TTS server hub running on the local Minisforum server that exposes OpenAI-compatible audio endpoints backed by Google Gemini models, enabling seamless system-wide voice typing on mobile devices (via polished open-source keyboard APKs) and desktop PCs.
+A private speech-to-text hub that transcribes finished recordings with a local Whisper model on
+the owner's laptop GPU. It exposes the OpenAI-compatible transcription endpoint that off-the-shelf
+Android dictation keyboards already speak, so the phone, the tablet and the Windows PC all dictate
+into it. No audio, text or credential leaves the machine.
 
 ## Users / context
-The owner across their primary personal devices (Android phone, Android tablet, and Windows desktop PC), communicating with the local Minisforum server over local Wi-Fi or secure mesh VPN (Tailscale).
+The owner across their own devices (Android phone, Android tablet, Windows laptop), reaching the
+hub over the Tailscale private mesh from home or away.
 
 ## Scope
 - **In:**
-  - Lightweight Python FastAPI hub running on the Minisforum server.
-  - OpenAI-compatible endpoints: `POST /v1/audio/transcriptions` and `POST /v1/audio/speech`.
-  - Gemini API integration using `google-genai` SDK (Gemini Flash for transcription + smart punctuation/grammar formatting; Gemini 3.1 Flash TTS for voice synthesis).
-  - Built-in web dashboard on the hub for testing audio, previewing voices, and managing settings.
+  - Python FastAPI hub running on the owner's laptop, mounted privately at `/tts-stt`.
+  - `POST /v1/audio/transcriptions`, OpenAI-compatible, so existing keyboards work unchanged.
+  - Local Whisper `large-v3-turbo` on the laptop's RTX 3060, loaded once and kept resident.
+  - Owner-only Control Center for issuing and revoking a distinct key per device.
   - Windows desktop voice typing hotkey utility (hold key -> record -> paste text).
-  - Setup and configuration guide for Android clients using open-source keyboards (e.g., Whisper IME / Sayboard).
+  - Setup guide for Android clients using open-source keyboards (Whisper IME / Sayboard).
 - **Out (for now):**
-  - Building a custom Android IME keyboard from scratch (using existing polished open-source APKs instead).
-  - Multi-user authentication or public SaaS billing infrastructure.
-  - Heavy local neural model installations on the Minisforum server (utilizing Gemini cloud API via owner's key to keep the server ultra-lightweight).
+  - Text-to-speech. Dropped 2026-09-08; may return later as a local model.
+  - Any cloud speech provider, provider vault, or outbound network call.
+  - Building a custom Android keyboard from scratch.
+  - Multi-user authentication, public hosting, billing.
 
 ## Requirements
-- Expose `POST /v1/audio/transcriptions` conforming to OpenAI Audio API spec (multipart audio in, JSON `{ "text": "..." }` out).
-- Expose `POST /v1/audio/speech` conforming to OpenAI Audio API spec (text and voice options in, audio byte stream out).
-- Use Gemini models via `google-genai` SDK with `GEMINI_API_KEY`.
-- Provide system prompts for STT to cleanly strip filler words ("um", "uh"), insert proper punctuation, and respect formatting commands without altering the speaker's meaning.
-- Provide a simple web UI served by the hub to test microphone recording, transcription, and TTS playback.
+- Expose `POST /v1/audio/transcriptions` conforming to the OpenAI Audio API (multipart audio in,
+  JSON `{ "text": "..." }` out). The `model` field is accepted and ignored — keyboards hardcode
+  `whisper-1` and there is one local engine.
+- Transcribe the whole recording. Nothing may decide on the owner's behalf that he has stopped
+  speaking.
+- Keep faithful transcription as the endpoint default; no rewriting or cleanup of the words.
+- Serve a simple web page for testing microphone recording and transcription.
 - Provide a lightweight Windows client script for hotkey-based dictation.
 
-## Non-functional needs
-- **Security / privacy:** `GEMINI_API_KEY` stored exclusively in local `.env` (never committed to git). Hub accessible via LAN and Tailscale without public port forwarding.
-- **Performance / limits:** Sub-second to 1.5s turnaround for dictation snippets. Server memory footprint under 200 MB RAM and negligible CPU when idle.
-- **Platform:** Server runs on Windows or Linux / Docker (Python 3.11+); mobile clients on Android.
+- **Security / privacy:** The hub makes no outbound request of any kind. The root encryption key,
+  Google OAuth details and recovery verifier stay only in the local `.env`. Access is private
+  Tailscale with Funnel disabled; host/origin guard, owner-only Google sign-in, secure sessions
+  and per-device revocable keys are required. No audio or transcript is ever written to disk.
+- **Performance / limits:** Model load ~5s once at startup; roughly one second to transcribe a
+  short clip on the GPU. Uploads capped at 25 MB. The model occupies GPU memory while the hub
+  runs, so the 200 MB idle-RAM cap from the cloud design no longer applies and has been removed.
+- **Platform:** Hub runs on Windows with an NVIDIA GPU and CUDA (Python 3.11+); clients on
+  Android and Windows.
 
 ## Constraints / decisions already made
-- **Stack:** Python 3.11+, FastAPI, Uvicorn, `google-genai`, `python-dotenv`.
-- **API Standard:** OpenAI Audio API compatibility so off-the-shelf clients (Whisper IME, etc.) work out-of-the-box without custom mobile app builds.
-- **Engines:** Gemini Flash for STT / text cleanup; Gemini Flash TTS for voice generation (no Kokoro).
+- **Stack:** Python 3.11+, FastAPI, Uvicorn, `faster-whisper`/CTranslate2, `python-dotenv`.
+- **API Standard:** OpenAI Audio API compatibility so off-the-shelf clients work out of the box.
+- **Where the compute runs:** the laptop GPU, not the always-on mini PC. The GPU fits the largest
+  Whisper model, and accuracy is the whole point of the change. The accepted cost is that
+  dictation is unavailable while the laptop is asleep. Reasoning in `docs/local-stt-direction.md`.
+- **No cloud provider.** Removed 2026-09-08 along with the encrypted provider vault, the free-tier
+  gate and the request quota, none of which have anything left to protect.
 
 ## Success criteria (how we'll know it works)
-- The FastAPI hub starts, passes automated endpoint tests, and transcribes test audio files into formatted text.
-- An Android device with Whisper IME connects to the hub and types transcribed text into any app when pressing the mic button.
-- The desktop hotkey tool records voice on keypress and automatically pastes text into the focused window.
-- The web interface allows testing audio input and playing back synthesized Gemini speech.
+- A real recording of the owner speaking comes back complete, verbatim and correctly punctuated —
+  not a synthetic test voice, which has no prosody to punctuate from.
+- Dictation into the Android keyboard works from home and away over Tailscale.
+- The desktop hotkey tool records on keypress and pastes text into the focused window.
+- Nothing in normal operation opens an outbound connection.
 
 ## Risks / open questions
-- *Mobile network connectivity outside home Wi-Fi:* Solved by running Tailscale on the Minisforum and mobile devices.
-- *Audio format compatibility across Android audio recorders:* Ensure hub handles `wav`, `mp3`, `m4a`, `ogg`, `webm`, and `flac` cleanly.
+- *The laptop must be awake.* A sleeping laptop cannot be woken over the network. A week of real
+  use decides whether this bites; the fallback is a smaller model on the mini PC.
+- *Whether Google owner sign-in is still warranted* now that there is no spendable key behind it.
+  Kept for now; the real wall is Tailscale plus revocable device keys.
+- *Which Android keyboard to standardise on.* None tested yet.
+- *Audio format compatibility across Android recorders:* `wav`, `mp3`, `m4a`, `ogg`, `webm`,
+  `flac` and `aac` are accepted.
 
 ## Milestones
-1. **Repository & Governance Setup:** Initialize git, configure rule templates, create PRD, and make initial commit on branch.
-2. **Core Server Hub:** Build FastAPI server with OpenAI-compatible STT and TTS endpoints powered by `google-genai`.
-3. **Web Dashboard:** Add browser-based testing UI for microphone input and TTS playback.
-4. **Desktop Dictation Client:** Build lightweight Windows hotkey listener for PC voice typing.
-5. **Android Integration Guide & Verification:** Provide setup instructions and test with mobile open-source keyboard APK.
+1. **Repository & Governance Setup:** done.
+2. **Secure Hub Core:** done — contract, Control Center, device key lifecycle, mounted tester.
+3. **Local GPU engine:** done — proven on real audio, wired into the endpoint.
+4. **Desktop Dictation Client:** built; physical paste still unverified.
+5. **Android Integration Guide & Verification:** guide written; real-device acceptance pending.
